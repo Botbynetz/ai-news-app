@@ -8,7 +8,8 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
   const [totalResults, setTotalResults] = useState(0);
-  const [theme, setTheme] = useState("system"); // "light" | "dark" | "system"
+  const [theme, setTheme] = useState("system");
+  const [sourceProvider, setSourceProvider] = useState(""); // ✅ tambahan
 
   const pageSize = 9;
 
@@ -29,7 +30,7 @@ export default function Home() {
       localStorage.setItem("theme", "light");
     } else {
       localStorage.setItem("theme", "system");
-      if (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) {
+      if (window.matchMedia("(prefers-color-scheme: dark)").matches) {
         root.classList.add("dark");
       } else {
         root.classList.remove("dark");
@@ -49,16 +50,18 @@ export default function Home() {
         console.error("❌ API error:", data.error || data);
         setNews([]);
         setTotalResults(0);
+        setSourceProvider("");
         return;
       }
 
-      // API returns { totalResults, articles }
       setNews(data.articles || []);
       setTotalResults(data.totalResults || 0);
+      setSourceProvider(data.sourceProvider || ""); // ✅ simpan provider
     } catch (err) {
       console.error("❌ Fetch failed:", err);
       setNews([]);
       setTotalResults(0);
+      setSourceProvider("");
     } finally {
       setLoading(false);
     }
@@ -93,9 +96,8 @@ export default function Home() {
     { key: "technology", label: "Technology" },
   ];
 
-  // image fallback function (client-side)
   const handleImgError = (e) => {
-    e.currentTarget.src = "/next.svg"; // gunakan asset lokal fallback
+    e.currentTarget.src = "/next.svg";
   };
 
   return (
@@ -107,10 +109,21 @@ export default function Home() {
             📰 G-NEWS UPDATE
           </h1>
           <p className="text-gray-600 dark:text-gray-400 mt-2">
-            {query ? `Sumber berita terbaru seputar "${query}"` : category ? `Kategori berita: ${category}` : "Berita terbaru"}
+            {query
+              ? `Sumber berita terbaru seputar "${query}"`
+              : category
+              ? `Kategori berita: ${category}`
+              : "Berita terbaru"}
           </p>
           {totalResults > 0 && (
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Menampilkan {Math.min(totalResults, pageSize)} dari {totalResults} hasil</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+              Menampilkan {Math.min(totalResults, pageSize)} dari {totalResults} hasil
+            </p>
+          )}
+          {sourceProvider && (
+            <p className="text-xs text-green-600 dark:text-green-400 mt-1">
+              ✅ Berita dari: <b>{sourceProvider}</b>
+            </p>
           )}
         </div>
 
@@ -152,7 +165,7 @@ export default function Home() {
         </button>
       </form>
 
-      {/* Category buttons (scrollable on mobile) */}
+      {/* Category buttons */}
       <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
         {categories.map((cat) => (
           <button
@@ -160,7 +173,9 @@ export default function Home() {
             onClick={() => handleCategory(cat.key)}
             aria-pressed={category === cat.key}
             className={`shrink-0 px-4 py-2 rounded-lg border transition ${
-              category === cat.key ? "bg-blue-600 text-white" : "bg-white dark:bg-gray-800 dark:text-gray-200 hover:bg-blue-100 dark:hover:bg-gray-700"
+              category === cat.key
+                ? "bg-blue-600 text-white"
+                : "bg-white dark:bg-gray-800 dark:text-gray-200 hover:bg-blue-100 dark:hover:bg-gray-700"
             }`}
           >
             {cat.label}
@@ -170,19 +185,25 @@ export default function Home() {
 
       {/* Loading */}
       {loading && (
-        <p className="text-gray-500 dark:text-gray-400 text-lg mb-6">⏳ Sedang memuat berita...</p>
+        <p className="text-gray-500 dark:text-gray-400 text-lg mb-6">
+          ⏳ Sedang memuat berita...
+        </p>
       )}
 
       {/* No results */}
       {!loading && news.length === 0 && (
-        <p className="text-red-500 text-lg mb-6">❌ Tidak ada berita ditemukan.</p>
+        <p className="text-red-500 text-lg mb-6">
+          ❌ Tidak ada berita ditemukan.
+        </p>
       )}
 
       {/* Grid berita */}
       <section className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
         {news.map((article, idx) => (
-          <article key={article.url || idx} className="border rounded-xl shadow hover:shadow-lg transition bg-white dark:bg-gray-900 overflow-hidden flex flex-col">
-            {/* image area */}
+          <article
+            key={article.url || idx}
+            className="border rounded-xl shadow hover:shadow-lg transition bg-white dark:bg-gray-900 overflow-hidden flex flex-col"
+          >
             <div className="w-full">
               {article.imageUrl ? (
                 <img
@@ -198,14 +219,15 @@ export default function Home() {
                 </div>
               )}
             </div>
-
-            {/* content */}
             <div className="p-4 flex flex-col justify-between flex-1">
               <div>
-                <h2 className="text-lg font-semibold mb-2 line-clamp-2 dark:text-white">{article.title}</h2>
-                <p className="text-gray-600 dark:text-gray-300 text-sm line-clamp-3">{article.description || ""}</p>
+                <h2 className="text-lg font-semibold mb-2 line-clamp-2 dark:text-white">
+                  {article.title}
+                </h2>
+                <p className="text-gray-600 dark:text-gray-300 text-sm line-clamp-3">
+                  {article.description || ""}
+                </p>
               </div>
-
               <div className="mt-3 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
                 <span>📌 {article.source}</span>
                 {article.publishedAt && (
@@ -219,7 +241,6 @@ export default function Home() {
                   </span>
                 )}
               </div>
-
               <a
                 href={article.url}
                 target="_blank"
@@ -241,18 +262,26 @@ export default function Home() {
             disabled={page === 1}
             onClick={() => setPage((p) => Math.max(1, p - 1))}
             aria-disabled={page === 1}
-            className={`px-4 py-2 rounded-lg ${page === 1 ? "bg-gray-300 text-gray-500 cursor-not-allowed dark:bg-gray-700 dark:text-gray-500" : "bg-blue-600 text-white hover:bg-blue-700"}`}
+            className={`px-4 py-2 rounded-lg ${
+              page === 1
+                ? "bg-gray-300 text-gray-500 cursor-not-allowed dark:bg-gray-700 dark:text-gray-500"
+                : "bg-blue-600 text-white hover:bg-blue-700"
+            }`}
           >
             ⬅ Prev
           </button>
-
-          <span className="text-gray-700 dark:text-gray-300 font-medium">Page {page} / {totalPages}</span>
-
+          <span className="text-gray-700 dark:text-gray-300 font-medium">
+            Page {page} / {totalPages}
+          </span>
           <button
             disabled={page === totalPages}
             onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
             aria-disabled={page === totalPages}
-            className={`px-4 py-2 rounded-lg ${page === totalPages ? "bg-gray-300 text-gray-500 cursor-not-allowed dark:bg-gray-700 dark:text-gray-500" : "bg-blue-600 text-white hover:bg-blue-700"}`}
+            className={`px-4 py-2 rounded-lg ${
+              page === totalPages
+                ? "bg-gray-300 text-gray-500 cursor-not-allowed dark:bg-gray-700 dark:text-gray-500"
+                : "bg-blue-600 text-white hover:bg-blue-700"
+            }`}
           >
             Next ➡
           </button>
