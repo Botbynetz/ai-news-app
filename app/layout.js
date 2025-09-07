@@ -18,30 +18,28 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html
-      lang="en"
-      suppressHydrationWarning
-    >
+    <html lang="en" suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-gray-100`}
       >
-        {children}
         <script
           dangerouslySetInnerHTML={{
             __html: `
-              // Cek localStorage & system preference saat load awal
               (function() {
-                const theme = localStorage.getItem("theme");
-                if (theme === "dark" || 
-                   (!theme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-                  document.documentElement.classList.add("dark");
-                } else {
-                  document.documentElement.classList.remove("dark");
-                }
+                try {
+                  const theme = localStorage.getItem("theme");
+                  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                  if (theme === "dark" || (!theme && prefersDark)) {
+                    document.documentElement.classList.add("dark");
+                  } else {
+                    document.documentElement.classList.remove("dark");
+                  }
+                } catch (e) {}
               })();
             `,
           }}
         />
+        {children}
       </body>
     </html>
   );
