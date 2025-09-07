@@ -22,19 +22,31 @@ export default function RootLayout({ children }) {
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-gray-100`}
       >
+        {/* 🌓 Apply theme sebelum render konten biar no flicker */}
         <script
           dangerouslySetInnerHTML={{
             __html: `
               (function() {
                 try {
-                  const theme = localStorage.getItem("theme");
+                  const root = document.documentElement;
+                  const theme = localStorage.getItem("theme") || "system";
                   const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-                  if (theme === "dark" || (!theme && prefersDark)) {
-                    document.documentElement.classList.add("dark");
+
+                  if (theme === "dark") {
+                    root.classList.add("dark");
+                  } else if (theme === "light") {
+                    root.classList.remove("dark");
                   } else {
-                    document.documentElement.classList.remove("dark");
+                    // system
+                    if (prefersDark) {
+                      root.classList.add("dark");
+                    } else {
+                      root.classList.remove("dark");
+                    }
                   }
-                } catch (e) {}
+                } catch (e) {
+                  console.error("Theme init error:", e);
+                }
               })();
             `,
           }}
