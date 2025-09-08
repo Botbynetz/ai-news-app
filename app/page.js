@@ -95,10 +95,6 @@ export default function Home() {
     { key: "technology", label: "Technology" },
   ];
 
-  const handleImgError = (e) => {
-    e.currentTarget.src = "/next.svg";
-  };
-
   // ✅ Schema JSON-LD builder
   const buildSchema = () => {
     const articlesSchema = news.map((a) => ({
@@ -137,9 +133,10 @@ export default function Home() {
 
   return (
     <main className="max-w-6xl mx-auto px-4 py-8">
-      {/* Header + Theme Dropdown */}
+      {/* Header */}
       <header className="mb-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
+          {/* ✅ Logo fix pakai logo.png */}
           <Image
             src="/logo.png"
             alt="G-News Logo"
@@ -149,7 +146,7 @@ export default function Home() {
           />
           <div>
             <h1 className="text-4xl font-bold text-gray-800 dark:text-gray-100">
-              G-NEWS UPDATE
+              G-NEWS TODAY
             </h1>
             <p className="text-gray-600 dark:text-gray-400 mt-1">
               {query
@@ -171,6 +168,7 @@ export default function Home() {
           </div>
         </div>
 
+        {/* Theme select */}
         <div>
           <label className="sr-only" htmlFor="theme-select">Theme</label>
           <select
@@ -197,12 +195,10 @@ export default function Home() {
           onChange={(e) => setQuery(e.target.value)}
           className="flex-1 p-3 border rounded-lg shadow-sm focus:ring focus:ring-blue-300 outline-none dark:bg-gray-800 dark:text-white"
           placeholder="Cari berita..."
-          aria-label="Cari berita"
         />
         <button
           type="submit"
           className="bg-blue-600 text-white px-6 py-3 rounded-lg shadow hover:bg-blue-700 transition"
-          aria-label="Cari"
         >
           Cari
         </button>
@@ -214,7 +210,6 @@ export default function Home() {
           <button
             key={cat.key}
             onClick={() => handleCategory(cat.key)}
-            aria-pressed={category === cat.key}
             className={`shrink-0 px-4 py-2 rounded-lg border transition ${
               category === cat.key
                 ? "bg-blue-600 text-white"
@@ -226,18 +221,10 @@ export default function Home() {
         ))}
       </div>
 
-      {/* Loading */}
-      {loading && (
-        <p className="text-gray-500 dark:text-gray-400 text-lg mb-6">
-          ⏳ Sedang memuat berita...
-        </p>
-      )}
-
-      {/* No results */}
+      {/* Loading / No result */}
+      {loading && <p className="text-gray-500 dark:text-gray-400 text-lg mb-6">⏳ Sedang memuat berita...</p>}
       {!loading && news.length === 0 && (
-        <p className="text-red-500 text-lg mb-6">
-          ❌ Tidak ada berita ditemukan.
-        </p>
+        <p className="text-red-500 text-lg mb-6">❌ Tidak ada berita ditemukan.</p>
       )}
 
       {/* Grid berita */}
@@ -249,13 +236,12 @@ export default function Home() {
           >
             <div className="w-full">
               {article.imageUrl ? (
-                <Image
+                <img
                   src={article.imageUrl}
                   alt={article.title || "Article image"}
-                  width={600}
-                  height={300}
                   className="w-full h-48 sm:h-56 object-cover"
-                  onError={handleImgError}
+                  loading="lazy"
+                  onError={(e) => (e.currentTarget.src = "/logo.png")}
                 />
               ) : (
                 <div className="w-full h-48 sm:h-56 bg-gray-200 dark:bg-gray-800 flex items-center justify-center text-gray-400">
@@ -290,7 +276,6 @@ export default function Home() {
                 target="_blank"
                 rel="noopener noreferrer"
                 className="mt-3 inline-block text-blue-600 dark:text-blue-400 font-medium hover:underline"
-                aria-label={`Baca selengkapnya: ${article.title}`}
               >
                 🔗 Baca selengkapnya
               </a>
@@ -305,7 +290,6 @@ export default function Home() {
           <button
             disabled={page === 1}
             onClick={() => setPage((p) => Math.max(1, p - 1))}
-            aria-disabled={page === 1}
             className={`px-4 py-2 rounded-lg ${
               page === 1
                 ? "bg-gray-300 text-gray-500 cursor-not-allowed dark:bg-gray-700 dark:text-gray-500"
@@ -320,7 +304,6 @@ export default function Home() {
           <button
             disabled={page === totalPages}
             onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-            aria-disabled={page === totalPages}
             className={`px-4 py-2 rounded-lg ${
               page === totalPages
                 ? "bg-gray-300 text-gray-500 cursor-not-allowed dark:bg-gray-700 dark:text-gray-500"
@@ -332,7 +315,7 @@ export default function Home() {
         </div>
       )}
 
-      {/* ✅ Schema Markup JSON-LD (Organization + Articles) */}
+      {/* ✅ Schema Markup JSON-LD */}
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
