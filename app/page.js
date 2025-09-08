@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
+import Image from "next/image";
 
 export default function Home() {
   const [query, setQuery] = useState("AI");
@@ -9,17 +10,15 @@ export default function Home() {
   const [page, setPage] = useState(1);
   const [totalResults, setTotalResults] = useState(0);
   const [theme, setTheme] = useState("system");
-  const [sourceProvider, setSourceProvider] = useState(""); // ✅ tambahan
+  const [sourceProvider, setSourceProvider] = useState("");
 
   const pageSize = 9;
 
-  // ambil theme dari localStorage
   useEffect(() => {
     const saved = localStorage.getItem("theme") || "system";
     setTheme(saved);
   }, []);
 
-  // update theme tiap berubah
   useEffect(() => {
     const root = document.documentElement;
     if (theme === "dark") {
@@ -56,7 +55,7 @@ export default function Home() {
 
       setNews(data.articles || []);
       setTotalResults(data.totalResults || 0);
-      setSourceProvider(data.sourceProvider || ""); // ✅ simpan provider
+      setSourceProvider(data.sourceProvider || "");
     } catch (err) {
       console.error("❌ Fetch failed:", err);
       setNews([]);
@@ -100,34 +99,78 @@ export default function Home() {
     e.currentTarget.src = "/next.svg";
   };
 
+  // ✅ Schema JSON-LD builder
+  const buildSchema = () => {
+    const articlesSchema = news.map((a) => ({
+      "@context": "https://schema.org",
+      "@type": "NewsArticle",
+      headline: a.title,
+      description: a.description || "",
+      url: a.url,
+      image: a.imageUrl ? [a.imageUrl] : [],
+      datePublished: a.publishedAt,
+      author: {
+        "@type": "Organization",
+        name: a.source || "Unknown",
+      },
+      publisher: {
+        "@type": "Organization",
+        name: "G-News",
+        logo: {
+          "@type": "ImageObject",
+          url: "https://ai-news-app.vercel.app/logo.png",
+        },
+      },
+    }));
+
+    return [
+      {
+        "@context": "https://schema.org",
+        "@type": "NewsMediaOrganization",
+        name: "G-News",
+        url: "https://ai-news-app.vercel.app",
+        logo: "https://ai-news-app.vercel.app/logo.png",
+      },
+      ...articlesSchema,
+    ];
+  };
+
   return (
     <main className="max-w-6xl mx-auto px-4 py-8">
       {/* Header + Theme Dropdown */}
       <header className="mb-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-4xl font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2">
-            📰 G-NEWS UPDATE
-          </h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-2">
-            {query
-              ? `Sumber berita terbaru seputar "${query}"`
-              : category
-              ? `Kategori berita: ${category}`
-              : "Berita terbaru"}
-          </p>
-          {totalResults > 0 && (
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-              Menampilkan {Math.min(totalResults, pageSize)} dari {totalResults} hasil
+        <div className="flex items-center gap-3">
+          <Image
+            src="/logo.png"
+            alt="G-News Logo"
+            width={60}
+            height={60}
+            priority
+          />
+          <div>
+            <h1 className="text-4xl font-bold text-gray-800 dark:text-gray-100">
+              G-NEWS UPDATE
+            </h1>
+            <p className="text-gray-600 dark:text-gray-400 mt-1">
+              {query
+                ? `Sumber berita terbaru seputar "${query}"`
+                : category
+                ? `Kategori berita: ${category}`
+                : "Berita terbaru"}
             </p>
-          )}
-          {sourceProvider && (
-            <p className="text-xs text-green-600 dark:text-green-400 mt-1">
-              ✅ Berita dari: <b>{sourceProvider}</b>
-            </p>
-          )}
+            {totalResults > 0 && (
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                Menampilkan {Math.min(totalResults, pageSize)} dari {totalResults} hasil
+              </p>
+            )}
+            {sourceProvider && (
+              <p className="text-xs text-green-600 dark:text-green-400">
+                ✅ Berita dari: <b>{sourceProvider}</b>
+              </p>
+            )}
+          </div>
         </div>
 
-        {/* Theme select */}
         <div>
           <label className="sr-only" htmlFor="theme-select">Theme</label>
           <select
@@ -206,11 +249,12 @@ export default function Home() {
           >
             <div className="w-full">
               {article.imageUrl ? (
-                <img
+                <Image
                   src={article.imageUrl}
                   alt={article.title || "Article image"}
+                  width={600}
+                  height={300}
                   className="w-full h-48 sm:h-56 object-cover"
-                  loading="lazy"
                   onError={handleImgError}
                 />
               ) : (
@@ -287,6 +331,14 @@ export default function Home() {
           </button>
         </div>
       )}
+
+      {/* ✅ Schema Markup JSON-LD (Organization + Articles) */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(buildSchema()),
+        }}
+      />
     </main>
   );
 }

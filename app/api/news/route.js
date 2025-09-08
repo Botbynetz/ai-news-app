@@ -13,9 +13,14 @@ export async function GET(req) {
   const CURRENTS_API_KEY = process.env.CURRENTS_API_KEY;
   const GUARDIAN_API_KEY = process.env.GUARDIAN_API_KEY;
 
+  // ✅ helper fetch with headers
   async function safeFetch(url, provider) {
     try {
-      const res = await fetch(url);
+      const res = await fetch(url, {
+        headers: { "User-Agent": "GNews-App/1.0 (+https://ai-news-app.vercel.app)" },
+        cache: "no-store", // kita handle cache manual di response
+      });
+
       if (res.status === 429) {
         console.warn(`⚠️ ${provider} kena limit (429)`);
         return null;
@@ -41,7 +46,7 @@ export async function GET(req) {
       )}&language=en&page=${page}&pageSize=${pageSize}&sortBy=publishedAt&apiKey=${NEWS_API_KEY}`;
       data = await safeFetch(url, "NewsAPI");
       if (data?.status === "ok" && data.articles?.length) {
-        return NextResponse.json({
+        return withCache({
           sourceProvider: "NewsAPI",
           totalResults: data.totalResults,
           articles: data.articles.map((a) => ({
@@ -63,7 +68,7 @@ export async function GET(req) {
       )}&lang=en&max=${pageSize}&page=${page}&token=${GNEWS_API_KEY}`;
       data = await safeFetch(url, "GNews");
       if (data?.articles?.length) {
-        return NextResponse.json({
+        return withCache({
           sourceProvider: "GNews",
           totalResults: data.totalArticles || data.articles.length,
           articles: data.articles.map((a) => ({
@@ -85,7 +90,7 @@ export async function GET(req) {
       )}&language=en&page_number=${page}&page_size=${pageSize}&apiKey=${CURRENTS_API_KEY}`;
       data = await safeFetch(url, "Currents");
       if (data?.news?.length) {
-        return NextResponse.json({
+        return withCache({
           sourceProvider: "Currents",
           totalResults: data.news.length,
           articles: data.news.map((a) => ({
@@ -107,7 +112,7 @@ export async function GET(req) {
       )}&page=${page}&page-size=${pageSize}&api-key=${GUARDIAN_API_KEY}&show-fields=trailText,thumbnail`;
       data = await safeFetch(url, "Guardian");
       if (data?.response?.results?.length) {
-        return NextResponse.json({
+        return withCache({
           sourceProvider: "Guardian",
           totalResults: data.response.total,
           articles: data.response.results.map((a) => ({
@@ -122,7 +127,7 @@ export async function GET(req) {
       }
     }
 
-    return NextResponse.json({ sourceProvider: "None", totalResults: 0, articles: [] });
+    return withCache({ sourceProvider: "None", totalResults: 0, articles: [] });
   } catch (err) {
     console.error("❌ Fatal error:", err);
     return NextResponse.json(
@@ -130,4 +135,16 @@ export async function GET(req) {
       { status: 500 }
     );
   }
+}
+
+// ✅ Wrapper buat kasih cache header
+function withCache(jsonData) {
+  return new NextResponse(JSON.stringify(jsonData), {
+    status: 200,
+    headers: {
+      "Content-Type": "application/json",
+      "Cache-Control": "s-maxage=900, stale-while-revalidate=600", 
+      // cache 15 menit di CDN, boleh pakai stale 10 menit
+    },
+  });
 }

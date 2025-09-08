@@ -12,13 +12,44 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata = {
-  title: "AI News",
-  description: "Berita AI terbaru dengan Next.js",
+  title: "AI News - Berita AI Terbaru",
+  description:
+    "Update berita terbaru seputar Artificial Intelligence, teknologi, bisnis, sains, dan tren global.",
+  keywords: [
+    "AI",
+    "Artificial Intelligence",
+    "Berita AI",
+    "Teknologi",
+    "Machine Learning",
+    "Deep Learning",
+    "Startup AI",
+    "Berita Teknologi",
+  ],
+  openGraph: {
+    title: "AI News - Berita AI Terbaru",
+    description:
+      "Berita AI terbaru, update teknologi, bisnis, sains, dan tren global dengan Next.js.",
+    url: "https://ai-news-app.vercel.app", // ganti domain kalo udah pake custom
+    siteName: "AI News",
+    images: [
+      {
+        url: "/og-image.png", // bikin file og-image.png di /public
+        width: 1200,
+        height: 630,
+        alt: "AI News Thumbnail",
+      },
+    ],
+    locale: "id_ID",
+    type: "website",
+  },
+  alternates: {
+    canonical: "https://ai-news-app.vercel.app", // ganti sesuai domain lo
+  },
 };
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="id" suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-gray-100`}
       >
@@ -37,7 +68,6 @@ export default function RootLayout({ children }) {
                   } else if (theme === "light") {
                     root.classList.remove("dark");
                   } else {
-                    // system
                     if (prefersDark) {
                       root.classList.add("dark");
                     } else {
