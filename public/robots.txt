@@ -1,0 +1,10 @@
+# *
+User-agent: *
+Allow: /
+Disallow: /api/
+
+# Host
+Host: https://ai-news-app.vercel.app
+
+# Sitemaps
+Sitemap: https://ai-news-app.vercel.app/sitemap.xml

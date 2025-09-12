@@ -3,6 +3,15 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import Image from "next/image";
 import Link from "next/link";
 
+// 🔧 Helper slugify biar konsisten dengan detail page
+function slugify(text) {
+  return text
+    .toString()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-") // ganti non-alfanumerik jadi "-"
+    .replace(/(^-|-$)+/g, "");   // hapus "-" di awal/akhir
+}
+
 export default function Home() {
   const [query, setQuery] = useState("AI");
   const [category, setCategory] = useState("");
@@ -243,7 +252,7 @@ export default function Home() {
       {/* Grid berita */}
       <section className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
         {news.map((article, idx) => {
-          const slug = encodeURIComponent(article.title?.toLowerCase().replace(/\s+/g, "-"));
+          const slug = slugify(article.title || `news-${idx}`);
           return (
             <article
               key={article.url || idx}

@@ -2,18 +2,25 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 
+// 🔧 Helper slugify biar konsisten sama homepage
+function slugify(text) {
+  return text
+    .toString()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-") // semua non-alfanumerik jadi "-"
+    .replace(/(^-|-$)+/g, "");   // hapus "-" di awal/akhir
+}
+
 export default function NewsDetail() {
   const { slug } = useParams();
   const [article, setArticle] = useState(null);
   const [aiArticle, setAiArticle] = useState("");
   const [loading, setLoading] = useState(true);
 
-  // 🔄 Ambil artikel dari localStorage (diset di homepage)
+  // 🔄 Ambil artikel dari localStorage
   useEffect(() => {
     const savedNews = JSON.parse(localStorage.getItem("latestNews") || "[]");
-    const found = savedNews.find(
-      (n) => slug === n.title?.toLowerCase().replace(/\s+/g, "-")
-    );
+    const found = savedNews.find((n) => slugify(n.title || "") === slug);
     setArticle(found || null);
   }, [slug]);
 
