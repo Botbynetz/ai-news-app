@@ -10,9 +10,9 @@ const nextConfig = {
       "guardianapis.com",
       "media.guim.co.uk",
       "storage.googleapis.com",
-      "i.guim.co.uk"
+      "i.guim.co.uk",
     ],
   },
 };
 
-module.exports = nextConfig;
+export default nextConfig;
