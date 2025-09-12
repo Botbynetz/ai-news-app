@@ -176,11 +176,22 @@ export default function Home() {
       {/* Header */}
       <header className="mb-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <Image src="/logo.png" alt="G-News Logo" width={60} height={60} priority />
+          {/* ✅ Logo + Judul jadi tombol balik ke home */}
+          <Link href="/" className="flex items-center gap-3">
+            <Image
+              src="/logo.png"
+              alt="G-News Logo"
+              width={60}
+              height={60}
+              priority
+            />
+            <div>
+              <h1 className="text-4xl font-bold text-gray-800 dark:text-gray-100">
+                G-NEWS TODAY
+              </h1>
+            </div>
+          </Link>
           <div>
-            <h1 className="text-4xl font-bold text-gray-800 dark:text-gray-100">
-              G-NEWS TODAY
-            </h1>
             <p className="text-gray-600 dark:text-gray-400 mt-1">
               {query
                 ? `Sumber berita terbaru seputar "${query}"`
