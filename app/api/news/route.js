@@ -1,5 +1,35 @@
 import { NextResponse } from "next/server";
 
+// ✅ Summarizer dengan OpenAI
+async function summarizeText(text) {
+  try {
+    const res = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: "gpt-4o-mini",
+        messages: [
+          {
+            role: "system",
+            content: "Kamu adalah AI summarizer. Buat ringkasan singkat (max 40 kata, bahasa Indonesia).",
+          },
+          { role: "user", content: text },
+        ],
+        max_tokens: 80,
+      }),
+    });
+
+    const data = await res.json();
+    return data.choices?.[0]?.message?.content?.trim() || text.slice(0, 100);
+  } catch (err) {
+    console.error("⚠️ Summarizer gagal:", err.message);
+    return text.slice(0, 120); // fallback ke potongan teks
+  }
+}
+
 export async function GET(req) {
   const { searchParams } = new URL(req.url);
 
@@ -13,14 +43,12 @@ export async function GET(req) {
   const CURRENTS_API_KEY = process.env.CURRENTS_API_KEY;
   const GUARDIAN_API_KEY = process.env.GUARDIAN_API_KEY;
 
-  // ✅ helper fetch with headers
   async function safeFetch(url, provider) {
     try {
       const res = await fetch(url, {
         headers: { "User-Agent": "GNews-App/1.0 (+https://ai-news-app.vercel.app)" },
-        cache: "no-store", // kita handle cache manual di response
+        cache: "no-store",
       });
-
       if (res.status === 429) {
         console.warn(`⚠️ ${provider} kena limit (429)`);
         return null;
@@ -46,17 +74,20 @@ export async function GET(req) {
       )}&language=en&page=${page}&pageSize=${pageSize}&sortBy=publishedAt&apiKey=${NEWS_API_KEY}`;
       data = await safeFetch(url, "NewsAPI");
       if (data?.status === "ok" && data.articles?.length) {
-        return withCache({
-          sourceProvider: "NewsAPI",
-          totalResults: data.totalResults,
-          articles: data.articles.map((a) => ({
+        const articles = await Promise.all(
+          data.articles.map(async (a) => ({
             title: a.title || "No title",
-            description: a.description || "",
+            description: await summarizeText(a.description || a.content || a.title),
             url: a.url,
             source: a.source?.name || "NewsAPI",
             publishedAt: a.publishedAt,
             imageUrl: a.urlToImage,
-          })),
+          }))
+        );
+        return withCache({
+          sourceProvider: "NewsAPI",
+          totalResults: data.totalResults,
+          articles,
         });
       }
     }
@@ -68,17 +99,20 @@ export async function GET(req) {
       )}&lang=en&max=${pageSize}&page=${page}&token=${GNEWS_API_KEY}`;
       data = await safeFetch(url, "GNews");
       if (data?.articles?.length) {
-        return withCache({
-          sourceProvider: "GNews",
-          totalResults: data.totalArticles || data.articles.length,
-          articles: data.articles.map((a) => ({
+        const articles = await Promise.all(
+          data.articles.map(async (a) => ({
             title: a.title,
-            description: a.description || "",
+            description: await summarizeText(a.description || a.title),
             url: a.url,
             source: a.source?.name || "GNews",
             publishedAt: a.publishedAt,
             imageUrl: a.image,
-          })),
+          }))
+        );
+        return withCache({
+          sourceProvider: "GNews",
+          totalResults: data.totalArticles || data.articles.length,
+          articles,
         });
       }
     }
@@ -90,17 +124,20 @@ export async function GET(req) {
       )}&language=en&page_number=${page}&page_size=${pageSize}&apiKey=${CURRENTS_API_KEY}`;
       data = await safeFetch(url, "Currents");
       if (data?.news?.length) {
-        return withCache({
-          sourceProvider: "Currents",
-          totalResults: data.news.length,
-          articles: data.news.map((a) => ({
+        const articles = await Promise.all(
+          data.news.map(async (a) => ({
             title: a.title,
-            description: a.description || "",
+            description: await summarizeText(a.description || a.title),
             url: a.url,
             source: a.author || "Currents",
             publishedAt: a.published || null,
             imageUrl: a.image || null,
-          })),
+          }))
+        );
+        return withCache({
+          sourceProvider: "Currents",
+          totalResults: data.news.length,
+          articles,
         });
       }
     }
@@ -112,19 +149,92 @@ export async function GET(req) {
       )}&page=${page}&page-size=${pageSize}&api-key=${GUARDIAN_API_KEY}&show-fields=trailText,thumbnail`;
       data = await safeFetch(url, "Guardian");
       if (data?.response?.results?.length) {
-        return withCache({
-          sourceProvider: "Guardian",
-          totalResults: data.response.total,
-          articles: data.response.results.map((a) => ({
+        const articles = await Promise.all(
+          data.response.results.map(async (a) => ({
             title: a.webTitle,
-            description: a.fields?.trailText || "",
+            description: await summarizeText(a.fields?.trailText || a.webTitle),
             url: a.webUrl,
             source: "The Guardian",
             publishedAt: a.webPublicationDate,
             imageUrl: a.fields?.thumbnail || null,
-          })),
+          }))
+        );
+        return withCache({
+          sourceProvider: "Guardian",
+          totalResults: data.response.total,
+          articles,
         });
       }
+    }
+
+    // 5️⃣ Kompas (RSS)
+    try {
+      const kompasUrl = `https://www.kompas.id/berita/feed`;
+      const kompasRes = await fetch(kompasUrl, { cache: "no-store" });
+      if (kompasRes.ok) {
+        const xml = await kompasRes.text();
+        const items = [...xml.matchAll(/<item>([\s\S]*?)<\/item>/g)];
+        if (items.length) {
+          const articles = await Promise.all(
+            items.slice(0, pageSize).map(async (m) => {
+              const block = m[1];
+              const get = (tag) =>
+                (block.match(new RegExp(`<${tag}>(.*?)</${tag}>`, "s")) || [])[1] || "";
+              return {
+                title: get("title"),
+                description: await summarizeText(get("description") || get("title")),
+                url: get("link"),
+                source: "Kompas.id",
+                publishedAt: get("pubDate") || null,
+                imageUrl: null,
+              };
+            })
+          );
+          return withCache({
+            sourceProvider: "KompasRSS",
+            totalResults: articles.length,
+            articles,
+          });
+        }
+      }
+    } catch (err) {
+      console.warn("⚠️ Kompas RSS gagal:", err.message);
+    }
+
+    // 6️⃣ Google News RSS
+    try {
+      const gnewsRss = `https://news.google.com/rss/search?q=${encodeURIComponent(
+        q
+      )}&hl=id&gl=ID&ceid=ID:id`;
+      const gnewsRes = await fetch(gnewsRss, { cache: "no-store" });
+      if (gnewsRes.ok) {
+        const xml = await gnewsRes.text();
+        const items = [...xml.matchAll(/<item>([\s\S]*?)<\/item>/g)];
+        if (items.length) {
+          const articles = await Promise.all(
+            items.slice(0, pageSize).map(async (m) => {
+              const block = m[1];
+              const get = (tag) =>
+                (block.match(new RegExp(`<${tag}>(.*?)</${tag}>`, "s")) || [])[1] || "";
+              return {
+                title: get("title"),
+                description: await summarizeText(get("description") || get("title")),
+                url: get("link"),
+                source: "Google News",
+                publishedAt: get("pubDate") || null,
+                imageUrl: null,
+              };
+            })
+          );
+          return withCache({
+            sourceProvider: "GoogleNewsRSS",
+            totalResults: articles.length,
+            articles,
+          });
+        }
+      }
+    } catch (err) {
+      console.warn("⚠️ Google News RSS gagal:", err.message);
     }
 
     return withCache({ sourceProvider: "None", totalResults: 0, articles: [] });
@@ -137,14 +247,13 @@ export async function GET(req) {
   }
 }
 
-// ✅ Wrapper buat kasih cache header
+// ✅ Cache wrapper
 function withCache(jsonData) {
   return new NextResponse(JSON.stringify(jsonData), {
     status: 200,
     headers: {
       "Content-Type": "application/json",
-      "Cache-Control": "s-maxage=900, stale-while-revalidate=600", 
-      // cache 15 menit di CDN, boleh pakai stale 10 menit
+      "Cache-Control": "s-maxage=900, stale-while-revalidate=600",
     },
   });
 }

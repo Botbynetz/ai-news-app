@@ -1,6 +1,7 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import Image from "next/image";
+import Link from "next/link";
 
 export default function Home() {
   const [query, setQuery] = useState("AI");
@@ -11,14 +12,18 @@ export default function Home() {
   const [totalResults, setTotalResults] = useState(0);
   const [theme, setTheme] = useState("system");
   const [sourceProvider, setSourceProvider] = useState("");
+  const [hasMore, setHasMore] = useState(true);
 
   const pageSize = 9;
+  const observer = useRef();
 
+  // 🔄 Load theme preference
   useEffect(() => {
     const saved = localStorage.getItem("theme") || "system";
     setTheme(saved);
   }, []);
 
+  // 🎨 Apply theme
   useEffect(() => {
     const root = document.documentElement;
     if (theme === "dark") {
@@ -37,7 +42,8 @@ export default function Home() {
     }
   }, [theme]);
 
-  const fetchNews = async (search = query, pageNum = 1, cat = category) => {
+  // 📡 Fetch news
+  const fetchNews = async (search = query, pageNum = 1, cat = category, append = false) => {
     try {
       setLoading(true);
       const res = await fetch(
@@ -47,44 +53,69 @@ export default function Home() {
 
       if (!res.ok) {
         console.error("❌ API error:", data.error || data);
-        setNews([]);
+        setNews(append ? news : []);
         setTotalResults(0);
         setSourceProvider("");
+        setHasMore(false);
         return;
       }
 
-      setNews(data.articles || []);
+      const newArticles = append
+        ? [...(news || []), ...(data.articles || [])]
+        : data.articles || [];
+
+      setNews(newArticles);
+
+      // ✅ Simpan artikel ke localStorage (buat detail page)
+      localStorage.setItem("latestNews", JSON.stringify(newArticles));
+
       setTotalResults(data.totalResults || 0);
       setSourceProvider(data.sourceProvider || "");
+      setHasMore(pageNum * pageSize < (data.totalResults || 0));
     } catch (err) {
       console.error("❌ Fetch failed:", err);
-      setNews([]);
-      setTotalResults(0);
-      setSourceProvider("");
+      setHasMore(false);
     } finally {
       setLoading(false);
     }
   };
 
+  // 🔄 Fetch on page/query/category change
   useEffect(() => {
-    fetchNews(query, page, category);
+    fetchNews(query, page, category, page > 1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, query, category]);
 
+  // 🔍 Search
   const handleSubmit = (e) => {
     e.preventDefault();
     setPage(1);
-    fetchNews(query, 1, category);
+    fetchNews(query, 1, category, false);
   };
 
+  // 📂 Category
   const handleCategory = (cat) => {
     setCategory(cat);
     setQuery("");
     setPage(1);
   };
 
-  const totalPages = Math.max(1, Math.ceil(totalResults / pageSize));
+  // 🔄 Infinite scroll observer
+  const lastNewsElementRef = useCallback(
+    (node) => {
+      if (loading) return;
+      if (observer.current) observer.current.disconnect();
+      observer.current = new IntersectionObserver((entries) => {
+        if (entries[0].isIntersecting && hasMore) {
+          setPage((prev) => prev + 1);
+        }
+      });
+      if (node) observer.current.observe(node);
+    },
+    [loading, hasMore]
+  );
 
+  // 🏷️ Categories
   const categories = [
     { key: "business", label: "Business" },
     { key: "entertainment", label: "Entertainment" },
@@ -95,7 +126,7 @@ export default function Home() {
     { key: "technology", label: "Technology" },
   ];
 
-  // ✅ Schema JSON-LD builder
+  // 📰 Schema builder
   const buildSchema = () => {
     const articlesSchema = news.map((a) => ({
       "@context": "https://schema.org",
@@ -136,14 +167,7 @@ export default function Home() {
       {/* Header */}
       <header className="mb-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          {/* ✅ Logo fix pakai logo.png */}
-          <Image
-            src="/logo.png"
-            alt="G-News Logo"
-            width={60}
-            height={60}
-            priority
-          />
+          <Image src="/logo.png" alt="G-News Logo" width={60} height={60} priority />
           <div>
             <h1 className="text-4xl font-bold text-gray-800 dark:text-gray-100">
               G-NEWS TODAY
@@ -157,7 +181,7 @@ export default function Home() {
             </p>
             {totalResults > 0 && (
               <p className="text-sm text-gray-500 dark:text-gray-400">
-                Menampilkan {Math.min(totalResults, pageSize)} dari {totalResults} hasil
+                Menampilkan {news.length} dari {totalResults} hasil
               </p>
             )}
             {sourceProvider && (
@@ -170,13 +194,10 @@ export default function Home() {
 
         {/* Theme select */}
         <div>
-          <label className="sr-only" htmlFor="theme-select">Theme</label>
           <select
-            id="theme-select"
             value={theme}
             onChange={(e) => setTheme(e.target.value)}
             className="px-3 py-2 border rounded-lg bg-white dark:bg-gray-800 dark:text-gray-100 shadow-sm"
-            aria-label="Pilih tema"
           >
             <option value="light">☀ Light</option>
             <option value="dark">🌙 Dark</option>
@@ -187,9 +208,7 @@ export default function Home() {
 
       {/* Search bar */}
       <form onSubmit={handleSubmit} className="flex gap-2 mb-4">
-        <label htmlFor="search" className="sr-only">Cari berita</label>
         <input
-          id="search"
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
@@ -221,98 +240,72 @@ export default function Home() {
         ))}
       </div>
 
-      {/* Loading / No result */}
-      {loading && <p className="text-gray-500 dark:text-gray-400 text-lg mb-6">⏳ Sedang memuat berita...</p>}
-      {!loading && news.length === 0 && (
-        <p className="text-red-500 text-lg mb-6">❌ Tidak ada berita ditemukan.</p>
-      )}
-
       {/* Grid berita */}
       <section className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {news.map((article, idx) => (
-          <article
-            key={article.url || idx}
-            className="border rounded-xl shadow hover:shadow-lg transition bg-white dark:bg-gray-900 overflow-hidden flex flex-col"
-          >
-            <div className="w-full">
-              {article.imageUrl ? (
-                <img
-                  src={article.imageUrl}
-                  alt={article.title || "Article image"}
-                  className="w-full h-48 sm:h-56 object-cover"
-                  loading="lazy"
-                  onError={(e) => (e.currentTarget.src = "/logo.png")}
-                />
-              ) : (
-                <div className="w-full h-48 sm:h-56 bg-gray-200 dark:bg-gray-800 flex items-center justify-center text-gray-400">
-                  No image
-                </div>
-              )}
-            </div>
-            <div className="p-4 flex flex-col justify-between flex-1">
-              <div>
-                <h2 className="text-lg font-semibold mb-2 line-clamp-2 dark:text-white">
-                  {article.title}
-                </h2>
-                <p className="text-gray-600 dark:text-gray-300 text-sm line-clamp-3">
-                  {article.description || ""}
-                </p>
-              </div>
-              <div className="mt-3 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
-                <span>📌 {article.source}</span>
-                {article.publishedAt && (
-                  <span>
-                    🗓{" "}
-                    {new Date(article.publishedAt).toLocaleDateString("id-ID", {
-                      day: "2-digit",
-                      month: "short",
-                      year: "numeric",
-                    })}
-                  </span>
+        {news.map((article, idx) => {
+          const slug = encodeURIComponent(article.title?.toLowerCase().replace(/\s+/g, "-"));
+          return (
+            <article
+              key={article.url || idx}
+              ref={idx === news.length - 1 ? lastNewsElementRef : null}
+              className="border rounded-xl shadow hover:shadow-lg transition bg-white dark:bg-gray-900 overflow-hidden flex flex-col"
+            >
+              <div className="w-full">
+                {article.imageUrl ? (
+                  <img
+                    src={article.imageUrl}
+                    alt={article.title || "Article image"}
+                    className="w-full h-48 sm:h-56 object-cover"
+                    loading="lazy"
+                    onError={(e) => (e.currentTarget.src = "/logo.png")}
+                  />
+                ) : (
+                  <div className="w-full h-48 sm:h-56 bg-gray-200 dark:bg-gray-800 flex items-center justify-center text-gray-400">
+                    No image
+                  </div>
                 )}
               </div>
-              <a
-                href={article.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-3 inline-block text-blue-600 dark:text-blue-400 font-medium hover:underline"
-              >
-                🔗 Baca selengkapnya
-              </a>
-            </div>
-          </article>
-        ))}
+              <div className="p-4 flex flex-col justify-between flex-1">
+                <div>
+                  <h2 className="text-lg font-semibold mb-2 line-clamp-2 dark:text-white">
+                    <Link href={`/news/${slug}`}>{article.title}</Link>
+                  </h2>
+                  <p className="text-gray-600 dark:text-gray-300 text-sm line-clamp-4">
+                    {article.description || ""}
+                  </p>
+                </div>
+                <div className="mt-3 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+                  <span>📌 {article.source}</span>
+                  {article.publishedAt && (
+                    <span>
+                      🗓{" "}
+                      {new Date(article.publishedAt).toLocaleDateString("id-ID", {
+                        day: "2-digit",
+                        month: "short",
+                        year: "numeric",
+                      })}
+                    </span>
+                  )}
+                </div>
+                <a
+                  href={article.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-3 inline-block text-blue-600 dark:text-blue-400 font-medium hover:underline"
+                >
+                  🔗 Baca sumber asli
+                </a>
+              </div>
+            </article>
+          );
+        })}
       </section>
 
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex justify-center items-center gap-4 mt-10">
-          <button
-            disabled={page === 1}
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-            className={`px-4 py-2 rounded-lg ${
-              page === 1
-                ? "bg-gray-300 text-gray-500 cursor-not-allowed dark:bg-gray-700 dark:text-gray-500"
-                : "bg-blue-600 text-white hover:bg-blue-700"
-            }`}
-          >
-            ⬅ Prev
-          </button>
-          <span className="text-gray-700 dark:text-gray-300 font-medium">
-            Page {page} / {totalPages}
-          </span>
-          <button
-            disabled={page === totalPages}
-            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-            className={`px-4 py-2 rounded-lg ${
-              page === totalPages
-                ? "bg-gray-300 text-gray-500 cursor-not-allowed dark:bg-gray-700 dark:text-gray-500"
-                : "bg-blue-600 text-white hover:bg-blue-700"
-            }`}
-          >
-            Next ➡
-          </button>
-        </div>
+      {/* Loading indicator */}
+      {loading && (
+        <p className="text-gray-500 dark:text-gray-400 text-center mt-6">
+          ⏳ Memuat berita...
+        </p>
       )}
 
       {/* ✅ Schema Markup JSON-LD */}
