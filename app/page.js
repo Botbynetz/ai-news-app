@@ -2,6 +2,10 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import AdSlot from "../../components/AdSlot";
+
+// small helper for hover classes
+const cardHover = "hover:shadow-lg hover:scale-105 transition-transform duration-200";
 
 // 🔧 Helper slugify biar konsisten dengan detail page
 function slugify(text) {
@@ -22,6 +26,7 @@ export default function Home() {
   const [theme, setTheme] = useState("system");
   const [sourceProvider, setSourceProvider] = useState("");
   const [hasMore, setHasMore] = useState(true);
+  const [sortOrder, setSortOrder] = useState("latest");
 
   const pageSize = 9;
   const observer = useRef();
@@ -177,13 +182,14 @@ export default function Home() {
       <header className="mb-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           {/* ✅ Logo + Judul jadi tombol balik ke home */}
-          <Link href="/" className="flex items-center gap-3">
+          <Link href="/" className="flex items-center gap-3 group">
             <Image
               src="/logo.png"
               alt="G-News Logo"
               width={60}
               height={60}
               priority
+              className="group-hover:scale-105 transition-transform duration-200"
             />
             <div>
               <h1 className="text-4xl font-bold text-gray-800 dark:text-gray-100">
@@ -243,6 +249,18 @@ export default function Home() {
         </button>
       </form>
 
+      {/* Ad Slot */}
+      <AdSlot />
+
+      {/* Sort Filter */}
+      <div className="flex items-center gap-3 mb-4">
+        <label className="text-sm">Sort:</label>
+        <select value={sortOrder} onChange={(e) => setSortOrder(e.target.value)} className="px-3 py-2 border rounded-lg bg-white dark:bg-gray-800">
+          <option value="latest">Terbaru</option>
+          <option value="oldest">Terlama</option>
+        </select>
+      </div>
+
       {/* Category buttons */}
       <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
         {categories.map((cat) => (
@@ -262,13 +280,19 @@ export default function Home() {
 
       {/* Grid berita */}
       <section className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {news.map((article, idx) => {
+        {news
+          .slice()
+          .sort((a, b) => {
+            if (!a.publishedAt || !b.publishedAt) return 0;
+            return sortOrder === "latest" ? new Date(b.publishedAt) - new Date(a.publishedAt) : new Date(a.publishedAt) - new Date(b.publishedAt);
+          })
+          .map((article, idx) => {
           const slug = slugify(article.title || `news-${idx}`);
           return (
             <article
               key={article.url || idx}
               ref={idx === news.length - 1 ? lastNewsElementRef : null}
-              className="border rounded-xl shadow hover:shadow-lg transition bg-white dark:bg-gray-900 overflow-hidden flex flex-col"
+              className={`border rounded-xl ${cardHover} bg-white dark:bg-gray-900 overflow-hidden flex flex-col`}
             >
               <div className="w-full">
                 {article.imageUrl ? (
@@ -286,6 +310,9 @@ export default function Home() {
                 )}
               </div>
               <div className="p-4 flex flex-col justify-between flex-1">
+                <div className="flex items-start justify-between gap-2">
+                  <span className="text-xs bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 px-2 py-1 rounded">{article.category || "Umum"}</span>
+                </div>
                 <div>
                   <h2 className="text-lg font-semibold mb-2 line-clamp-2 dark:text-white">
                     <Link href={`/news/${slug}`}>{article.title}</Link>
@@ -307,25 +334,27 @@ export default function Home() {
                     </span>
                   )}
                 </div>
-                <a
-                  href={article.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mt-3 inline-block text-blue-600 dark:text-blue-400 font-medium hover:underline"
-                >
-                  🔗 Baca sumber asli
-                </a>
+                {/* Link internal to detail page (no external links) */}
+                <Link href={`/news/${slug}`} className="mt-3 inline-block text-blue-600 dark:text-blue-400 font-medium hover:underline">
+                  Baca selengkapnya
+                </Link>
               </div>
             </article>
           );
         })}
       </section>
 
-      {/* Loading indicator */}
+      {/* Skeleton loading */}
       {loading && (
-        <p className="text-gray-500 dark:text-gray-400 text-center mt-6">
-          ⏳ Memuat berita...
-        </p>
+        <div className="mt-6 grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="border rounded-xl bg-white dark:bg-gray-900 p-4 space-y-4 animate-pulse">
+              <div className="h-40 bg-gray-200 dark:bg-gray-800 rounded" />
+              <div className="h-4 bg-gray-200 dark:bg-gray-800 rounded w-3/4" />
+              <div className="h-3 bg-gray-200 dark:bg-gray-800 rounded w-5/6" />
+            </div>
+          ))}
+        </div>
       )}
 
       {/* ✅ Schema Markup JSON-LD */}

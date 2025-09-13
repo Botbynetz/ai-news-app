@@ -1,3 +1,7 @@
+module.exports = {
+  siteUrl: process.env.SITE_URL || "https://ai-news-app.vercel.app",
+  generateRobotsTxt: false, // we'll provide custom robots.txt
+};
 /** @type {import('next-sitemap').IConfig} */
 module.exports = {
   siteUrl: "https://ai-news-app.vercel.app", // 🔥 ganti ke domain custom kalau udah ada

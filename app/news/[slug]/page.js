@@ -2,6 +2,8 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import AdSlot from "../../../components/AdSlot";
+import { ShareButtons, BookmarkButton } from "../../../components/ShareButtons";
 
 // 🔧 Helper slugify biar konsisten sama homepage
 function slugify(text) {
@@ -204,10 +206,36 @@ export default function NewsDetail() {
         </article>
       )}
 
-      {/* Disclaimer */}
-      <p className="mt-6 text-sm text-gray-500 dark:text-gray-400 italic">
+      {/* Share + Bookmark + Disclaimer */}
+      <div className="mt-6 flex items-center gap-4">
+        <ShareButtons url={`${process.env.NEXT_PUBLIC_SITE_ORIGIN || "https://ai-news-app.vercel.app"}/news/${slug}`} title={article.title} />
+        <BookmarkButton article={article} />
+      </div>
+
+      <p className="mt-4 text-sm text-gray-500 dark:text-gray-400 italic">
         Artikel ini ditulis ulang oleh AI berdasarkan sumber berita terpercaya.
       </p>
+
+      {/* Ad after article */}
+      <AdSlot />
+
+      {/* JSON-LD for detail article */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "NewsArticle",
+            headline: article.title,
+            description: article.description || "",
+            image: article.imageUrl || undefined,
+            datePublished: article.publishedAt || undefined,
+            author: { "@type": "Organization", name: article.source || "G-News" },
+            publisher: { "@type": "Organization", name: "G-News", logo: { "@type": "ImageObject", url: `${process.env.SITE_URL || "https://ai-news-app.vercel.app"}/logo.png` } },
+            mainEntityOfPage: { "@type": "WebPage", "@id": `${process.env.NEXT_PUBLIC_SITE_ORIGIN || "https://ai-news-app.vercel.app"}/news/${slug}` },
+          }),
+        }}
+      />
 
       {/* Related News */}
       {related.length > 0 && (

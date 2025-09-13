@@ -65,3 +65,13 @@ Jika mau otomatisasi setup env via CLI, ada skrip PowerShell helper di `scripts/
 3. Jalankan skrip: `.\scripts\setup-vercel-env.ps1` dan ikuti prompt (masukkan nilai env ketika diminta).
 
 Catatan: skrip ini interaktif dan tidak menyimpan kunci apa pun ke repository.
+
+### Sitemap
+
+Project sudah menyertakan `next-sitemap` config. Jika belum terinstall, jalankan:
+
+```powershell
+npm install next-sitemap --save-dev
+```
+
+Dan jalankan `npm run postbuild` setelah build untuk menghasilkan sitemap.
