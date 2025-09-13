@@ -3,6 +3,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import AdSlot from "../components/AdSlot";
+import SummaryLoader from "../components/SummaryLoader";
 
 // small helper for hover classes
 const cardHover = "hover:shadow-lg hover:scale-105 transition-transform duration-200";
@@ -27,6 +28,13 @@ export default function Home() {
   const [sourceProvider, setSourceProvider] = useState("");
   const [hasMore, setHasMore] = useState(true);
   const [sortOrder, setSortOrder] = useState("latest");
+  const [summaries, setSummaries] = useState({});
+
+  // Simple in-memory cache and concurrency control for summaries
+  const summaryCache = useRef(new Map());
+  const summaryQueue = useRef([]);
+  const summaryRunning = useRef(0);
+  const SUMMARY_CONCURRENCY = 3;
 
   const pageSize = 9;
   const observer = useRef();
@@ -283,66 +291,80 @@ export default function Home() {
         {news
           .slice()
           .sort((a, b) => {
-            if (!a.publishedAt || !b.publishedAt) return 0;
-            return sortOrder === "latest" ? new Date(b.publishedAt) - new Date(a.publishedAt) : new Date(a.publishedAt) - new Date(b.publishedAt);
+            if (!a?.publishedAt || !b?.publishedAt) return 0;
+            return sortOrder === "latest"
+              ? new Date(b.publishedAt) - new Date(a.publishedAt)
+              : new Date(a.publishedAt) - new Date(b.publishedAt);
           })
           .map((article, idx) => {
-          const slug = slugify(article.title || `news-${idx}`);
-          return (
-            <article
-              key={article.url || idx}
-              ref={idx === news.length - 1 ? lastNewsElementRef : null}
-              className={`border rounded-xl ${cardHover} bg-white dark:bg-gray-900 overflow-hidden flex flex-col`}
-            >
-              <div className="w-full">
-                {article.imageUrl ? (
-                  <img
-                    src={article.imageUrl}
-                    alt={article.title || "Article image"}
-                    className="w-full h-48 sm:h-56 object-cover"
-                    loading="lazy"
-                    onError={(e) => (e.currentTarget.src = "/logo.png")}
-                  />
-                ) : (
-                  <div className="w-full h-48 sm:h-56 bg-gray-200 dark:bg-gray-800 flex items-center justify-center text-gray-400">
-                    No image
-                  </div>
-                )}
-              </div>
-              <div className="p-4 flex flex-col justify-between flex-1">
-                <div className="flex items-start justify-between gap-2">
-                  <span className="text-xs bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 px-2 py-1 rounded">{article.category || "Umum"}</span>
-                </div>
-                <div>
-                  <h2 className="text-lg font-semibold mb-2 line-clamp-2 dark:text-white">
-                    <Link href={`/news/${slug}`}>{article.title}</Link>
-                  </h2>
-                  <p className="text-gray-600 dark:text-gray-300 text-sm line-clamp-4">
-                    {article.description || ""}
-                  </p>
-                </div>
-                <div className="mt-3 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
-                  <span>📌 {article.source}</span>
-                  {article.publishedAt && (
-                    <span>
-                      🗓{" "}
-                      {new Date(article.publishedAt).toLocaleDateString("id-ID", {
-                        day: "2-digit",
-                        month: "short",
-                        year: "numeric",
-                      })}
-                    </span>
+            const slug = slugify(article.title || `news-${idx}`);
+            return (
+              <article
+                key={article.url || idx}
+                ref={idx === news.length - 1 ? lastNewsElementRef : null}
+                className={`border rounded-xl ${cardHover} bg-white dark:bg-gray-900 overflow-hidden flex flex-col`}
+              >
+                <div className="w-full">
+                  {article.imageUrl ? (
+                    <img
+                      src={article.imageUrl}
+                      alt={article.title || "Article image"}
+                      className="w-full h-48 sm:h-56 object-cover"
+                      loading="lazy"
+                      onError={(e) => (e.currentTarget.src = "/logo.png")}
+                    />
+                  ) : (
+                    <div className="w-full h-48 sm:h-56 bg-gray-200 dark:bg-gray-800 flex items-center justify-center text-gray-400">
+                      No image
+                    </div>
                   )}
                 </div>
-                {/* Link internal to detail page (no external links) */}
-                <Link href={`/news/${slug}`} className="mt-3 inline-block text-blue-600 dark:text-blue-400 font-medium hover:underline">
-                  Baca selengkapnya
-                </Link>
-              </div>
-            </article>
-          );
-        })}
+                <div className="p-4 flex flex-col justify-between flex-1">
+                  <div className="flex items-start justify-between gap-2">
+                    <span className="text-xs bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 px-2 py-1 rounded">{article.category || "Umum"}</span>
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-semibold mb-2 line-clamp-2 dark:text-white">
+                      <Link href={`/news/${slug}`}>{article.title}</Link>
+                    </h2>
+                    {/* TLDR summary (from server) */}
+                    {summaries[article.url] ? (
+                      <p className="text-gray-700 dark:text-gray-300 text-sm">{summaries[article.url]}</p>
+                    ) : (
+                      <p className="text-gray-600 dark:text-gray-300 text-sm line-clamp-4">{article.description || ""}</p>
+                    )}
+                  </div>
+                  <div className="mt-3 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+                    <span>📌 {article.source}</span>
+                    {article.publishedAt && (
+                      <span>
+                        🗓 {" "}
+                        {new Date(article.publishedAt).toLocaleDateString("id-ID", {
+                          day: "2-digit",
+                          month: "short",
+                          year: "numeric",
+                        })}
+                      </span>
+                    )}
+                  </div>
+                  {/* Link internal to detail page (no external links) */}
+                  <Link href={`/news/${slug}`} className="mt-3 inline-block text-blue-600 dark:text-blue-400 font-medium hover:underline">
+                    Baca selengkapnya
+                  </Link>
+                </div>
+              </article>
+            );
+          })}
       </section>
+
+      {/* Kick off summaries for first visible articles */}
+      {/* We debounce to avoid retriggering rapidly during scroll */}
+      <SummaryLoader
+        articles={news}
+        onSummaries={(map) => setSummaries((s) => ({ ...s, ...map }))}
+        summaryCache={summaryCache}
+        concurrency={SUMMARY_CONCURRENCY}
+      />
 
       {/* Skeleton loading */}
       {loading && (
