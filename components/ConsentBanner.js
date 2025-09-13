@@ -17,6 +17,28 @@ export default function ConsentBanner({ onConsent }) {
     try {
       localStorage.setItem("ads_consent", "granted");
       setVisible(false);
+      // Dynamically inject AdSense script if publisher id present
+      try {
+        const adsenseId = process.env.NEXT_PUBLIC_ADSENSE_ID;
+        if (adsenseId) {
+          const src = `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${adsenseId}`;
+          if (!document.querySelector(`script[src*="pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"]`)) {
+            const s = document.createElement('script');
+            s.src = src;
+            s.async = true;
+            s.crossOrigin = 'anonymous';
+            s.onload = function() { window.dispatchEvent(new Event('adsense:loaded')); };
+            s.onerror = function() { console.error('AdSense script failed to load'); };
+            document.head.appendChild(s);
+          } else {
+            // already present
+            window.dispatchEvent(new Event('adsense:loaded'));
+          }
+        }
+      } catch (e) {
+        console.error('inject adsense failed', e);
+      }
+
       if (onConsent) onConsent(true);
     } catch (e) {
       console.error("consent save failed", e);

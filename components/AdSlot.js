@@ -14,6 +14,30 @@ export default function AdSlot() {
     }
   }, []);
 
+  useEffect(() => {
+    if (consent !== "granted") return;
+
+    const tryPush = () => {
+      try {
+        if (window && window.adsbygoogle) {
+          try { (window.adsbygoogle = window.adsbygoogle || []).push({}); } catch (e) { console.warn('adsbygoogle push failed', e); }
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    };
+
+    // If adsbygoogle already loaded, push immediately
+    if (window && window.adsbygoogle) {
+      tryPush();
+    }
+
+    // Otherwise wait for loaded event
+    const onLoaded = () => tryPush();
+    window.addEventListener('adsense:loaded', onLoaded);
+    return () => window.removeEventListener('adsense:loaded', onLoaded);
+  }, [consent]);
+
   // If consent granted and adsense id available, render real ad container
   if (consent === "granted" && adsenseId) {
     return (
@@ -26,7 +50,6 @@ export default function AdSlot() {
             data-ad-slot="" // optional: set ad slot id
             data-ad-format="auto"
             data-full-width-responsive="true"></ins>
-          <script dangerouslySetInnerHTML={{ __html: `(adsbygoogle = window.adsbygoogle || []).push({});` }} />
         </div>
       </div>
     );

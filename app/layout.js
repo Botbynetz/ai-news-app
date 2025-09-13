@@ -49,20 +49,9 @@ export const metadata = {
 };
 
 export default function RootLayout({ children }) {
-  const adsenseId = process.env.NEXT_PUBLIC_ADSENSE_ID;
-
   return (
     <html lang="id" suppressHydrationWarning>
-      <head>
-        {/* Sertakan AdSense script hanya jika NEXT_PUBLIC_ADSENSE_ID tersedia */}
-        {adsenseId && (
-          <script
-            async
-            src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${adsenseId}`}
-            crossOrigin="anonymous"
-          ></script>
-        )}
-      </head>
+      <head />
 
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-gray-100`}
