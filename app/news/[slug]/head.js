@@ -1,22 +1,44 @@
-import { readFileSync } from "fs";
-
 export async function generateMetadata({ params }) {
   const slug = params.slug;
+  const site = process.env.SITE_URL || process.env.NEXT_PUBLIC_SITE_ORIGIN || "https://ai-news-app.vercel.app";
+  const canonical = `${site}/news/${slug}`;
 
-  // Try to read latestNews from a file? fallback to defaults
-  // NOTE: at runtime on server we don't have client's localStorage; metadata will be generic or empty.
-  const title = `G-NEWS - ${slug.replace(/-/g, " ")}`;
-  const description = `Baca artikel: ${slug.replace(/-/g, " ")}`;
+  try {
+    const apiUrl = `${site}/api/article?slug=${encodeURIComponent(slug)}`;
+    const res = await fetch(apiUrl, { cache: "no-store" });
+    const data = await res.json();
+    const article = data.article || {};
 
-  return {
-    title,
-    description,
-    openGraph: {
+    const title = article.title || `Berita: ${slug}`;
+    const description = (article.description || article.summary || "").slice(0, 160) || `Baca detail berita: ${slug}`;
+    const image = article.urlToImage || `${site}/download.png`;
+
+    return {
       title,
       description,
-      images: ["/og-image.png"],
-    },
-    robots: "index, follow",
-    alternates: { canonical: `${process.env.SITE_URL || "https://ai-news-app.vercel.app"}/news/${slug}` },
-  };
+      alternates: { canonical },
+      openGraph: {
+        title,
+        description,
+        url: canonical,
+        siteName: "AI News",
+        images: [{ url: image }],
+      },
+      twitter: {
+        card: 'summary_large_image',
+        title,
+        description,
+        images: [image],
+      },
+      robots: "index, follow",
+    };
+  } catch (err) {
+    console.error('generateMetadata error:', err.message || err);
+    return {
+      title: `Berita: ${slug}`,
+      description: `Baca detail berita: ${slug}`,
+      alternates: { canonical },
+      robots: "index, follow",
+    };
+  }
 }

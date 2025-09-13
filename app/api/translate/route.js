@@ -1,6 +1,4 @@
 import { NextResponse } from "next/server";
-import { getCached, setCached } from "../../../lib/summaryCache";
-const SUMMARY_TTL = parseInt(process.env.SUMMARY_TTL || "86400", 10); // seconds
 
 async function callOpenAI(prompt) {
   if (!process.env.OPENAI_API_KEY) {
@@ -16,10 +14,10 @@ async function callOpenAI(prompt) {
     body: JSON.stringify({
       model: "gpt-4o-mini",
       messages: [
-        { role: "system", content: "You are a summarizer. Provide a short TLDR in Indonesian (2-3 sentences)." },
+        { role: "system", content: "You are a translator. Translate the user text between Indonesian and English as requested." },
         { role: "user", content: prompt },
       ],
-      max_tokens: 120,
+      max_tokens: 600,
     }),
   });
 
@@ -35,22 +33,14 @@ async function callOpenAI(prompt) {
 export async function POST(req) {
   try {
     const body = await req.json();
-    const text = body.text || body.content || "";
+    const { text, target = "id" } = body;
     if (!text) return NextResponse.json({ error: "Missing text" }, { status: 400 });
 
-    const key = `s:${Buffer.from(text).toString("base64")}`;
-    const cached = await getCached(key);
-    if (cached) {
-      return NextResponse.json({ summary: cached, cached: true });
-    }
-
-    const summary = await callOpenAI(text);
-    if (summary) {
-      await setCached(key, summary, SUMMARY_TTL);
-    }
-    return NextResponse.json({ summary });
+    const prompt = `Translate the following text to ${target === 'en' ? 'English' : 'Indonesian'}:\n\n${text}`;
+    const translated = await callOpenAI(prompt);
+    return NextResponse.json({ translated });
   } catch (err) {
-    console.error("/api/summarize error:", err.message || err);
+    console.error("/api/translate error:", err.message || err);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }

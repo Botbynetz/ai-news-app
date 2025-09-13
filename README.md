@@ -39,10 +39,44 @@ npm install
 
 Untuk fitur generasi artikel AI dan fallback server-side, set environment variable berikut sebelum menjalankan aplikasi:
 
-- `OPENAI_API_KEY` - (required) API key OpenAI untuk endpoint server-side `/api/generate-article`.
-- `NEXT_PUBLIC_SITE_ORIGIN` - (optional but disarankan) URL base dari situs saat dijalankan (mis. `http://localhost:3000`) digunakan oleh `/api/article` untuk memanggil internal API.
-- `REDIS_URL` - (optional) jika diset, aplikasi akan menggunakan Redis untuk cache ringkasan (lebih stabil di production). Contoh: `redis://:password@hostname:6379/0`.
-- `SUMMARY_TTL` - (optional) waktu hidup cache ringkasan dalam detik. Default 86400 (1 hari).
+
+And run `npm run dev`.
+
+## 🛠️ PWA & Service Worker
+
+Project ships a minimal service worker at `public/sw.js` for basic offline support and runtime caching of API responses. The service worker is automatically registered on the client via a small React component. To test it locally:
+
+```powershell
+npm run dev
+# open DevTools -> Application -> Service Workers to inspect registration
+```
+
+Note: the service worker is intentionally minimal. For production-grade caching strategies (precaching, stale-while-revalidate, granular runtime rules), consider using Workbox or a dedicated SW build step.
+
+## 💰 Monetization / Ads
+
+This project includes a consent-driven ad flow. To enable real Google AdSense ads, set the following environment variable in your deployment (for example, in Vercel Environment Variables):
+
+- `NEXT_PUBLIC_ADSENSE_ID` - your AdSense publisher id in the format `ca-pub-XXXXXXXXXXXX`.
+
+The app will show a consent banner (once per browser) and only inject the AdSense script when the user grants consent. Until `NEXT_PUBLIC_ADSENSE_ID` is set, a visual placeholder is shown where ad slots would appear.
+
+## 📊 Google Analytics (GA4) Integration
+
+To enable GA4 tracking, set the environment variable `NEXT_PUBLIC_GA_ID` in your deployment (Vercel). Steps:
+
+1. Masuk ke Google Analytics → Admin → Buat Property baru.
+2. Pilih platform "Web" dan masukkan domain situs (mis. yoursite.vercel.app atau domain custom).
+3. Setelah property dibuat, buka bagian "Data Streams" → pilih stream web → salin "Measurement ID" (format: G-XXXXXXXX).
+4. Di Vercel, buka Settings → Environment Variables → tambahkan `NEXT_PUBLIC_GA_ID=G-XXXXXXXX` untuk Environment `Production` (pilihan recommended).
+5. Deploy ulang (or re-run build) agar script GA aktif pada production build.
+
+GA4 dapat membantu tracking trafik, user retention, dan integrasi dengan AdSense/Ads products.
+
+Automatic handling in this project:
+- The app loads GA only in production builds using a client-side loader component.
+- If `NEXT_PUBLIC_GA_ID` is not set, the loader will use a safe placeholder `G-XXXXXXX` to avoid build-time failures and will warn in development console.
+
 
 Contoh (PowerShell):
 

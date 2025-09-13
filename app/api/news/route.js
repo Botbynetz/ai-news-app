@@ -1,5 +1,24 @@
 import { NextResponse } from "next/server";
 
+// Simple in-memory rate limiter (per IP) - resets every minute
+const rateMap = new Map();
+const RATE_LIMIT = 60; // requests per minute per IP
+
+function isRateLimited(ip) {
+  const now = Date.now();
+  const entry = rateMap.get(ip) || { count: 0, ts: now };
+  if (now - entry.ts > 60 * 1000) {
+    // reset window
+    entry.count = 1;
+    entry.ts = now;
+    rateMap.set(ip, entry);
+    return false;
+  }
+  entry.count += 1;
+  rateMap.set(ip, entry);
+  return entry.count > RATE_LIMIT;
+}
+
 // ✅ Summarizer dengan OpenAI
 async function summarizeText(text) {
   try {
@@ -31,6 +50,14 @@ async function summarizeText(text) {
 }
 
 export async function GET(req) {
+  try {
+    const ip = req.headers.get("x-forwarded-for") || req.headers.get("x-real-ip") || "anonymous";
+    if (isRateLimited(ip)) {
+      return NextResponse.json({ error: "Rate limit exceeded" }, { status: 429 });
+    }
+  } catch (e) {
+    console.warn("Rate limiter error", e.message || e);
+  }
   const { searchParams } = new URL(req.url);
 
   const q = searchParams.get("q") || "AI";

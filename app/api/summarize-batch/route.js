@@ -1,7 +1,5 @@
 import { NextResponse } from "next/server";
-
-// Reuse in-memory cache from single summarize route by creating local one here as well
-const summaryCache = new Map();
+import { getCached, setCached } from "../../../lib/summaryCache";
 const SUMMARY_TTL = parseInt(process.env.SUMMARY_TTL || "86400", 10);
 
 async function callOpenAI(prompt) {
@@ -43,15 +41,15 @@ export async function POST(req) {
     const results = [];
     for (const t of texts) {
       const key = `s:${Buffer.from(t).toString("base64")}`;
-      const cached = summaryCache.get(key);
-      if (cached && cached.expiresAt > Date.now()) {
-        results.push({ text: t, summary: cached.summary, cached: true });
+      const cached = await getCached(key);
+      if (cached) {
+        results.push({ text: t, summary: cached, cached: true });
         continue;
       }
 
       try {
         const s = await callOpenAI(t);
-        if (s) summaryCache.set(key, { summary: s, expiresAt: Date.now() + SUMMARY_TTL * 1000 });
+        if (s) await setCached(key, s, SUMMARY_TTL);
         results.push({ text: t, summary: s });
       } catch (err) {
         console.error("summarize-batch item error:", err.message || err);

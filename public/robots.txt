@@ -1,7 +1,3 @@
-User-agent: *
-Disallow: /api/
-
-Sitemap: https://ai-news-app.vercel.app/sitemap.xml
 # *
 User-agent: *
 Allow: /
