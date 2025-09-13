@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import Script from 'next/script';
 import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
@@ -279,23 +280,20 @@ export default function NewsDetail() {
       {/* Ad after article */}
       <AdSlot />
 
-      {/* JSON-LD for detail article */}
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
-            "@context": "https://schema.org",
-            "@type": "NewsArticle",
-            headline: article.title,
-            description: article.description || "",
-            image: article.imageUrl || undefined,
-            datePublished: article.publishedAt || undefined,
-            author: { "@type": "Organization", name: article.source || "G-News" },
-            publisher: { "@type": "Organization", name: "G-News", logo: { "@type": "ImageObject", url: `${process.env.SITE_URL || "https://ai-news-app.vercel.app"}/next.svg` } },
-            mainEntityOfPage: { "@type": "WebPage", "@id": `${process.env.NEXT_PUBLIC_SITE_ORIGIN || "https://ai-news-app.vercel.app"}/news/${slug}` },
-          }),
-        }}
-      />
+      {/* JSON-LD for detail article (injected via next/script) */}
+      <Script id="json-ld" type="application/ld+json">
+        {JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "NewsArticle",
+          headline: article.title,
+          description: article.description || "",
+          image: article.imageUrl || `${process.env.NEXT_PUBLIC_SITE_ORIGIN || 'https://ai-news-app.vercel.app'}/next.svg`,
+          datePublished: article.publishedAt || undefined,
+          author: { "@type": "Organization", name: article.author || article.source || "G-News" },
+          publisher: { "@type": "Organization", name: "G-News", logo: { "@type": "ImageObject", url: `${process.env.NEXT_PUBLIC_SITE_ORIGIN || 'https://ai-news-app.vercel.app'}/next.svg` } },
+          mainEntityOfPage: { "@type": "WebPage", "@id": `${process.env.NEXT_PUBLIC_SITE_ORIGIN || 'https://ai-news-app.vercel.app'}/news/${slug}` },
+        })}
+      </Script>
 
       {/* Related News */}
       {related.length > 0 && (

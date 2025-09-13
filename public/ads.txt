@@ -1,0 +1,6 @@
+# Ads.txt placeholder
+# Set ADSENSE_TXT environment variable to your ads.txt content
+# Example (AdSense):
+# google.com, pub-0000000000000000, DIRECT, f08c47fec0942fa0
+
+# Replace this file by setting ADSENSE_TXT env or creating a real public/ads.txt

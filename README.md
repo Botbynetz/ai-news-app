@@ -18,11 +18,6 @@ Didesain modern, responsif, dan mendukung **dark mode toggle (light/dark/system)
 
 ## 📸 Screenshots
 ### Tampilan Desktop
-![Desktop Preview](public/desktop-preview.png)
-
-### Tampilan Mobile
-![Mobile Preview](public/mobile-preview.png)
-
 ---
 
 ## ⚡ Getting Started
@@ -34,8 +29,6 @@ git clone https://github.com/Botbynetz/ai-news-app.git
 cd ai-news-app
 
 npm install
-
-### Environment variables
 
 Untuk fitur generasi artikel AI dan fallback server-side, set environment variable berikut sebelum menjalankan aplikasi:
 

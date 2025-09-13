@@ -17,6 +17,7 @@ export async function generateMetadata({ params }) {
       title,
       description,
       alternates: { canonical },
+      metadataBase: site,
       openGraph: {
         title,
         description,
@@ -31,6 +32,12 @@ export async function generateMetadata({ params }) {
         images: [image],
       },
       robots: "index, follow",
+      other: {
+        'news_keywords': article.keywords ? article.keywords.join(',') : undefined,
+        'author': article.author || article.source || undefined,
+        'robots': 'index, follow',
+        'link:amphtml': `${site}/news/${slug}/amp`,
+      }
     };
   } catch (err) {
     console.error('generateMetadata error:', err.message || err);
