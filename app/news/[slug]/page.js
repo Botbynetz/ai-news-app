@@ -22,6 +22,9 @@ export default function NewsDetail() {
   const router = useRouter();
   const [article, setArticle] = useState(null);
   const [aiArticle, setAiArticle] = useState("");
+  const [translated, setTranslated] = useState({ en: null, id: null });
+  const [translateLoading, setTranslateLoading] = useState(false);
+  const [currentLang, setCurrentLang] = useState("id");
   const [loading, setLoading] = useState(true);
   const [related, setRelated] = useState([]);
   const [relatedTitle, setRelatedTitle] = useState("Berita Terkait");
@@ -148,6 +151,33 @@ export default function NewsDetail() {
     };
   }, [article, slug]);
 
+  // Translate handler (toggle en/id)
+  const handleTranslate = async (to) => {
+    if (!aiArticle) return;
+    if (translated[to]) {
+      setCurrentLang(to);
+      return;
+    }
+
+    setTranslateLoading(true);
+    try {
+      const res = await fetch(`/api/translate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: aiArticle, target: to }),
+      });
+      if (!res.ok) throw new Error("translate failed");
+      const data = await res.json();
+      const out = data.translated || data.result || "";
+      setTranslated((s) => ({ ...s, [to]: out }));
+      setCurrentLang(to);
+    } catch (err) {
+      console.error("translate error:", err);
+    } finally {
+      setTranslateLoading(false);
+    }
+  };
+
   if (!article) {
     return (
       <main className="max-w-3xl mx-auto px-4 py-8">
@@ -209,16 +239,39 @@ export default function NewsDetail() {
         </div>
       ) : (
         <article className="prose dark:prose-invert max-w-none">
-          {aiArticle.split("\n").map((para, idx) => (
-            <p key={idx}>{para}</p>
-          ))}
+          {((currentLang !== 'id' && translated[currentLang]) ? translated[currentLang] : aiArticle)
+            .split("\n")
+            .map((para, idx) => (
+              <p key={idx}>{para}</p>
+            ))}
         </article>
       )}
 
-      {/* Share + Bookmark + Disclaimer */}
+      {/* Share + Bookmark + Translate + Disclaimer */}
       <div className="mt-6 flex items-center gap-4">
         <ShareButtons url={`${process.env.NEXT_PUBLIC_SITE_ORIGIN || "https://ai-news-app.vercel.app"}/news/${slug}`} title={article.title} />
         <BookmarkButton article={article} />
+
+        {/* Translate toggles */}
+        <div className="ml-2 flex items-center gap-2">
+          <button
+            className={`px-3 py-1 rounded-md text-sm border ${currentLang === 'id' ? 'bg-gray-100 dark:bg-gray-800' : 'bg-white dark:bg-gray-900'}`}
+            onClick={() => handleTranslate('id')}
+            disabled={translateLoading}
+            aria-pressed={currentLang === 'id'}
+          >
+            ID
+          </button>
+          <button
+            className={`px-3 py-1 rounded-md text-sm border ${currentLang === 'en' ? 'bg-gray-100 dark:bg-gray-800' : 'bg-white dark:bg-gray-900'}`}
+            onClick={() => handleTranslate('en')}
+            disabled={translateLoading}
+            aria-pressed={currentLang === 'en'}
+          >
+            EN
+          </button>
+          {translateLoading && <span className="text-sm text-gray-500">Translating…</span>}
+        </div>
       </div>
 
       <p className="mt-4 text-sm text-gray-500 dark:text-gray-400 italic">
