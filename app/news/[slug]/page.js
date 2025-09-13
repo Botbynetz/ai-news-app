@@ -291,7 +291,7 @@ export default function NewsDetail() {
             image: article.imageUrl || undefined,
             datePublished: article.publishedAt || undefined,
             author: { "@type": "Organization", name: article.source || "G-News" },
-            publisher: { "@type": "Organization", name: "G-News", logo: { "@type": "ImageObject", url: `${process.env.SITE_URL || "https://ai-news-app.vercel.app"}/logo.png` } },
+            publisher: { "@type": "Organization", name: "G-News", logo: { "@type": "ImageObject", url: `${process.env.SITE_URL || "https://ai-news-app.vercel.app"}/next.svg` } },
             mainEntityOfPage: { "@type": "WebPage", "@id": `${process.env.NEXT_PUBLIC_SITE_ORIGIN || "https://ai-news-app.vercel.app"}/news/${slug}` },
           }),
         }}
@@ -319,7 +319,7 @@ export default function NewsDetail() {
                     className="w-full h-40 object-cover"
                     placeholder="blur"
                     blurDataURL={`data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10'><rect width='100%' height='100%' fill='%23e5e7eb'/></svg>`}
-                    onError={({ currentTarget }) => (currentTarget.src = "/logo.png")}
+                    onError={({ currentTarget }) => (currentTarget.src = "/next.svg")}
                   />
                 ) : (
                   <div className="w-full h-40 bg-gray-200 dark:bg-gray-800 flex items-center justify-center text-gray-400">

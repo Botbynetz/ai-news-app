@@ -11,6 +11,11 @@ const nextConfig = {
       "media.guim.co.uk",
       "storage.googleapis.com",
       "i.guim.co.uk",
+      "pbs.twimg.com",
+      "lh3.googleusercontent.com",
+      "images.unsplash.com",
+      "cdn.vox-cdn.com",
+      "cdn.shopify.com",
     ],
   },
 };
