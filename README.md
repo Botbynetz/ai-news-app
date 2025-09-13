@@ -41,6 +41,8 @@ Untuk fitur generasi artikel AI dan fallback server-side, set environment variab
 
 - `OPENAI_API_KEY` - (required) API key OpenAI untuk endpoint server-side `/api/generate-article`.
 - `NEXT_PUBLIC_SITE_ORIGIN` - (optional but disarankan) URL base dari situs saat dijalankan (mis. `http://localhost:3000`) digunakan oleh `/api/article` untuk memanggil internal API.
+- `REDIS_URL` - (optional) jika diset, aplikasi akan menggunakan Redis untuk cache ringkasan (lebih stabil di production). Contoh: `redis://:password@hostname:6379/0`.
+- `SUMMARY_TTL` - (optional) waktu hidup cache ringkasan dalam detik. Default 86400 (1 hari).
 
 Contoh (PowerShell):
 
@@ -48,6 +50,18 @@ Contoh (PowerShell):
 $env:OPENAI_API_KEY = "sk-..."
 $env:NEXT_PUBLIC_SITE_ORIGIN = "http://localhost:3000"
 npm run dev
+```
+
+Jika menggunakan Redis secara lokal untuk cache ringkasan, set `REDIS_URL` juga:
+
+```powershell
+$env:REDIS_URL = "redis://localhost:6379"
+``` 
+
+Jangan lupa install dependensi baru (`ioredis`) jika kamu men-deploy / menjalankan lokal setelah perubahan ini:
+
+```powershell
+npm install
 ```
 
 ### Perbaikan & optimasi
