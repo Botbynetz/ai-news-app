@@ -34,3 +34,24 @@ git clone https://github.com/Botbynetz/ai-news-app.git
 cd ai-news-app
 
 npm install
+
+### Environment variables
+
+Untuk fitur generasi artikel AI dan fallback server-side, set environment variable berikut sebelum menjalankan aplikasi:
+
+- `OPENAI_API_KEY` - (required) API key OpenAI untuk endpoint server-side `/api/generate-article`.
+- `NEXT_PUBLIC_SITE_ORIGIN` - (optional but disarankan) URL base dari situs saat dijalankan (mis. `http://localhost:3000`) digunakan oleh `/api/article` untuk memanggil internal API.
+
+Contoh (PowerShell):
+
+```powershell
+$env:OPENAI_API_KEY = "sk-..."
+$env:NEXT_PUBLIC_SITE_ORIGIN = "http://localhost:3000"
+npm run dev
+```
+
+### Perbaikan & optimasi
+
+- Panggilan OpenAI sekarang dijalankan di server-side melalui `/api/generate-article` sehingga API key tidak terekspos ke client.
+- Endpoint `/api/generate-article` memiliki cache in-memory (TTL 1 jam) dan retry/backoff sederhana untuk mengurangi duplikasi panggilan dan menangani transient error.
+- Detail page sekarang menampilkan skeleton loading saat artikel AI sedang dibuat, dan menggunakan fallback server `/api/article?slug=...` bila `localStorage` kosong.

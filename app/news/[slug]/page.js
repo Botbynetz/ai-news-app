@@ -76,45 +76,72 @@ export default function NewsDetail() {
 
   // ✍️ Generate artikel panjang via OpenAI
   useEffect(() => {
-    if (!article) return;
+    let mounted = true;
 
-    const generateAIArticle = async () => {
+    const fetchArticleFromServer = async (slugParam) => {
       try {
-        const res = await fetch("https://api.openai.com/v1/chat/completions", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${process.env.NEXT_PUBLIC_OPENAI_KEY}`,
-          },
-          body: JSON.stringify({
-            model: "gpt-4o-mini",
-            messages: [
-              {
-                role: "system",
-                content:
-                  "Kamu adalah AI penulis berita. Buat artikel panjang (3-5 paragraf) dalam bahasa Indonesia. Gaya formal, informatif, mudah dipahami.",
-              },
-              {
-                role: "user",
-                content: `Judul: ${article.title}\nRingkasan: ${article.description}\nSumber: ${article.source}\n\nTolong tulis ulang artikel ini dengan detail.`,
-              },
-            ],
-            max_tokens: 600,
-          }),
-        });
-
+        const res = await fetch(`/api/article?slug=${encodeURIComponent(slugParam)}`);
+        if (!res.ok) return null;
         const data = await res.json();
-        setAiArticle(data.choices?.[0]?.message?.content || "");
+        return data.article || null;
       } catch (err) {
-        console.error("⚠️ Gagal generate artikel AI:", err.message);
-        setAiArticle(article.description || "");
-      } finally {
-        setLoading(false);
+        console.warn("/api/article fetch failed:", err.message || err);
+        return null;
       }
     };
 
-    generateAIArticle();
-  }, [article]);
+    const generateAIArticle = async (srcArticle) => {
+      try {
+        const res = await fetch(`/api/generate-article`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title: srcArticle.title,
+            description: srcArticle.description || srcArticle.content || "",
+            source: srcArticle.source || "",
+          }),
+        });
+
+        if (!res.ok) {
+          console.warn("/api/generate-article failed");
+          return srcArticle.description || "";
+        }
+
+        const data = await res.json();
+        return data.content || srcArticle.description || "";
+      } catch (err) {
+        console.error("/api/generate-article error:", err.message || err);
+        return srcArticle.description || "";
+      }
+    };
+
+    (async () => {
+      try {
+        let src = article;
+
+        if (!src) {
+          // coba ambil dari server fallback
+          const srv = await fetchArticleFromServer(slug);
+          if (srv) {
+            src = srv;
+            if (mounted) setArticle(src);
+          }
+        }
+
+        if (src) {
+          const content = await generateAIArticle(src);
+          if (mounted) setAiArticle(content || "");
+        } else {
+          if (mounted) setAiArticle("");
+        }
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, [article, slug]);
 
   if (!article) {
     return (
@@ -163,9 +190,12 @@ export default function NewsDetail() {
 
       {/* Konten */}
       {loading ? (
-        <p className="text-gray-500 dark:text-gray-400">
-          ⏳ AI sedang menulis artikel...
-        </p>
+        <div className="space-y-4 animate-pulse">
+          <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
+          <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
+          <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
+          <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-5/6"></div>
+        </div>
       ) : (
         <article className="prose dark:prose-invert max-w-none">
           {aiArticle.split("\n").map((para, idx) => (
