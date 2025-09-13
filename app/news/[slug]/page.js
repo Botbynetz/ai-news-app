@@ -1,5 +1,8 @@
 "use client";
 import { useEffect, useState } from "react";
+import Image from "next/image";
+
+export const revalidate = 600;
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import AdSlot from "../../../components/AdSlot";
@@ -183,11 +186,17 @@ export default function NewsDetail() {
 
       {/* Gambar */}
       {article.imageUrl && (
-        <img
-          src={article.imageUrl}
-          alt={article.title}
-          className="w-full h-64 object-cover rounded-lg shadow mb-6"
-        />
+        <div className="mb-6">
+          <Image
+            src={article.imageUrl}
+            alt={article.title}
+            width={1200}
+            height={630}
+            className="w-full h-64 object-cover rounded-lg shadow"
+            placeholder="blur"
+            blurDataURL={`data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10'><rect width='100%' height='100%' fill='%23e5e7eb'/></svg>`}
+          />
+        </div>
       )}
 
       {/* Konten */}
@@ -251,11 +260,15 @@ export default function NewsDetail() {
                 className="block border rounded-lg shadow hover:shadow-lg transition bg-white dark:bg-gray-900 overflow-hidden"
               >
                 {rel.imageUrl ? (
-                  <img
+                  <Image
                     src={rel.imageUrl}
                     alt={rel.title}
+                    width={800}
+                    height={400}
                     className="w-full h-40 object-cover"
-                    onError={(e) => (e.currentTarget.src = "/logo.png")}
+                    placeholder="blur"
+                    blurDataURL={`data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10'><rect width='100%' height='100%' fill='%23e5e7eb'/></svg>`}
+                    onError={({ currentTarget }) => (currentTarget.src = "/logo.png")}
                   />
                 ) : (
                   <div className="w-full h-40 bg-gray-200 dark:bg-gray-800 flex items-center justify-center text-gray-400">

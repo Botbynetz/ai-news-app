@@ -5,6 +5,8 @@ import Link from "next/link";
 import AdSlot from "../components/AdSlot";
 import SummaryLoader from "../components/SummaryLoader";
 
+export const revalidate = 600;
+
 // small helper for hover classes
 const cardHover = "hover:shadow-lg hover:scale-105 transition-transform duration-200";
 
@@ -306,12 +308,15 @@ export default function Home() {
               >
                 <div className="w-full">
                   {article.imageUrl ? (
-                    <img
+                    <Image
                       src={article.imageUrl}
                       alt={article.title || "Article image"}
+                      width={800}
+                      height={450}
                       className="w-full h-48 sm:h-56 object-cover"
-                      loading="lazy"
-                      onError={(e) => (e.currentTarget.src = "/logo.png")}
+                      placeholder="blur"
+                      blurDataURL={`data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10'><rect width='100%' height='100%' fill='%23e5e7eb'/></svg>`}
+                      onError={({ currentTarget }) => (currentTarget.src = "/logo.png")}
                     />
                   ) : (
                     <div className="w-full h-48 sm:h-56 bg-gray-200 dark:bg-gray-800 flex items-center justify-center text-gray-400">
