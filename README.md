@@ -55,3 +55,13 @@ npm run dev
 - Panggilan OpenAI sekarang dijalankan di server-side melalui `/api/generate-article` sehingga API key tidak terekspos ke client.
 - Endpoint `/api/generate-article` memiliki cache in-memory (TTL 1 jam) dan retry/backoff sederhana untuk mengurangi duplikasi panggilan dan menangani transient error.
 - Detail page sekarang menampilkan skeleton loading saat artikel AI sedang dibuat, dan menggunakan fallback server `/api/article?slug=...` bila `localStorage` kosong.
+
+### Automasi setup Vercel (opsional)
+
+Jika mau otomatisasi setup env via CLI, ada skrip PowerShell helper di `scripts/setup-vercel-env.ps1`:
+
+1. Install Vercel CLI: `npm i -g vercel`
+2. Login: `vercel login`
+3. Jalankan skrip: `.\scripts\setup-vercel-env.ps1` dan ikuti prompt (masukkan nilai env ketika diminta).
+
+Catatan: skrip ini interaktif dan tidak menyimpan kunci apa pun ke repository.
