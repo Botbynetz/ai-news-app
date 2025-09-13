@@ -1,8 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
 import Image from "next/image";
-
-export const revalidate = 600;
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import AdSlot from "../../../components/AdSlot";

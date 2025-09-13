@@ -5,8 +5,6 @@ import Link from "next/link";
 import AdSlot from "../components/AdSlot";
 import SummaryLoader from "../components/SummaryLoader";
 
-export const revalidate = 600;
-
 // small helper for hover classes
 const cardHover = "hover:shadow-lg hover:scale-105 transition-transform duration-200";
 
