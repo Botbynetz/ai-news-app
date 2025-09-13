@@ -328,7 +328,12 @@ export default function Home() {
                       <Link href={`/news/${slug}`}>{article.title}</Link>
                     </h2>
                     {/* TLDR summary (from server) */}
-                    {summaries[article.url] ? (
+                    {summaries[article.url] === "" ? (
+                      <div className="space-y-2">
+                        <div className="h-3 bg-gray-200 dark:bg-gray-800 rounded w-5/6 animate-pulse" />
+                        <div className="h-3 bg-gray-200 dark:bg-gray-800 rounded w-3/4 animate-pulse" />
+                      </div>
+                    ) : summaries[article.url] ? (
                       <p className="text-gray-700 dark:text-gray-300 text-sm">{summaries[article.url]}</p>
                     ) : (
                       <p className="text-gray-600 dark:text-gray-300 text-sm line-clamp-4">{article.description || ""}</p>

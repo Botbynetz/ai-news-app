@@ -26,44 +26,35 @@ export default function SummaryLoader({ articles = [], onSummaries, summaryCache
 
     if (toProcess.length === 0) return;
 
-    // enqueue
-    queue.current.push(...toProcess);
+    const texts = toProcess.map((a) => a.description || a.content || a.title || a.url);
 
-    const results = {};
+    // mark as loading (empty string) so UI can show skeleton
+    const loadingMap = {};
+    toProcess.forEach((a) => (loadingMap[a.url] = ""));
+    if (onSummaries) onSummaries(loadingMap);
 
-    const runNext = async () => {
-      if (!mounted.current) return;
-      if (running.current >= concurrency) return;
-      const item = queue.current.shift();
-      if (!item) return;
-      running.current++;
-
+    (async () => {
       try {
-        const text = item.description || item.content || item.title || item.url;
-        const res = await fetch("/api/summarize", {
+        const res = await fetch("/api/summarize-batch", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ text }),
+          body: JSON.stringify({ texts }),
         });
-        if (res.ok) {
-          const data = await res.json();
-          const s = (data.summary || "").trim();
+        if (!res.ok) return;
+        const data = await res.json();
+        const results = data.results || [];
+        const map = {};
+        results.forEach((r, idx) => {
+          const item = toProcess[idx];
+          const s = (r.summary || "").trim();
           if (summaryCache.current) summaryCache.current.set(item.url, s);
-          results[item.url] = s;
-          if (onSummaries) onSummaries({ [item.url]: s });
-        }
+          map[item.url] = s;
+        });
+        if (onSummaries) onSummaries(map);
       } catch (err) {
-        // ignore individual errors
-        console.error("summary loader error:", err);
-      } finally {
-        running.current--;
-        // continue until queue empty
-        if (queue.current.length > 0) runNext();
+        console.error("summary batch error:", err);
       }
-    };
-
-    // start initial workers
-    for (let i = 0; i < concurrency; i++) runNext();
+    })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [articles]);
 
