@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import AdSlot from "../../components/AdSlot";
+import AdSlot from "../components/AdSlot";
 
 // small helper for hover classes
 const cardHover = "hover:shadow-lg hover:scale-105 transition-transform duration-200";
